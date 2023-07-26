@@ -1,0 +1,11 @@
+{
+  "connectionString": "couchbases://cb.1fl-8b1b9ibmtoaj.nonprod-project-avengers.com",
+  "username": "testuser",
+  "password": "P@ssword1",
+  "bucket": "default",
+  "operation": "Update",
+  "numDocs": 1000,
+  "docSize": 1000,
+  "runForTime": false,
+  "runTimeHours": 2
+}
