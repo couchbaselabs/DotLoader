@@ -28,16 +28,10 @@ class WorkloadMain
     {
         IServiceCollection serviceCollection = new ServiceCollection();
         serviceCollection.AddLogging(builder => builder
-            .AddFilter(level => level >= LogLevel.Trace)
+            .AddFilter(level => level >= LogLevel.Debug)
         );
-        using ILoggerFactory loggerFactory =
-            LoggerFactory.Create(builder =>
-                builder.AddConsole(options =>
-                {
-                    options.IncludeScopes = true;
-                    options.TimestampFormat = "hh:mm:ss ";
-                }));
-        _logger = loggerFactory.CreateLogger("workload");
+        var loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
+        loggerFactory.AddFile("Logs/DotLoader-{Date}.txt", LogLevel.Debug);
 
 
         var testSettings = await JsonFileReader.ReadAsync<Settings>("../../../config.json");
@@ -65,7 +59,7 @@ class WorkloadMain
         var collection = await bucket.DefaultCollectionAsync();
 
         Enum.TryParse(testSettings.operation, out KeyValueWorkload.KvOperation operation);
-        var kvWl = new KeyValueWorkload(cluster, bucket, scope, collection, _logger, operation);
+        var kvWl = new KeyValueWorkload(cluster, bucket, scope, collection, operation);
         
         CancellationTokenSource sourceToken = new CancellationTokenSource();
         sourceToken.CancelAfter(TimeSpan.FromMinutes(_hoursToRun));
@@ -79,17 +73,12 @@ class WorkloadMain
         {
             tasks.Add(kvWl.StartAsync(docsPerThread, testSettings.docSize, i*docsPerThread, testSettings.runForTime, cancellationToken));
         }
+        tasks.Add(kvWl.PrintResultsPeriodically(cancellationToken));
         await Task.WhenAll(tasks);
 
-        PrintResults(kvWl.Results);
+        kvWl.PrintResults();
     }
 
-    private static void PrintResults(ConcurrentDictionary<string, int> dict)
-    {
-        Console.WriteLine("Operation Results:");
-        dict.Select(i => $"{i.Key}: {i.Value}").ToList().ForEach(Console.WriteLine);
-    }
-    
     public static class JsonFileReader
     {
         public static async Task<T> ReadAsync<T>(string filePath)

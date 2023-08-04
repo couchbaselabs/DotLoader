@@ -12,12 +12,11 @@ public class KeyValueWorkload
     private IBucket _bucket;
     private IScope _scope;
     private ICouchbaseCollection _collection;
-    private ILogger _logger;
     private KvOperation _operation;
 
     private const string DocPrefix = "DOTNET-KV-";
 
-    private ConcurrentDictionary<string, int> results = new ConcurrentDictionary<string, int>();
+    private ConcurrentDictionary<string, int> results = new();
 
     public ConcurrentDictionary<string, int> Results => results;
 
@@ -29,14 +28,13 @@ public class KeyValueWorkload
         Delete
     }
 
-    public KeyValueWorkload(ICluster cluster, IBucket bucket, IScope scope, ICouchbaseCollection collection, ILogger logger, KvOperation operation)
+    public KeyValueWorkload(ICluster cluster, IBucket bucket, IScope scope, ICouchbaseCollection collection, KvOperation operation)
     {
         _cluster = cluster;
         _bucket = bucket;
         _scope = scope;
         _collection = collection;
         _operation = operation;
-        _logger = logger;
     }
     
 
@@ -92,6 +90,30 @@ public class KeyValueWorkload
                 startBatch = start;
             }
         }
+    }
+
+    public async Task PrintResultsPeriodically(CancellationToken cancellationToken)
+    {
+        var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                PrintResults();
+            }
+        }
+        catch(OperationCanceledException)
+        {
+            
+        }
+
+    }
+
+    public void PrintResults()
+    {
+        Console.WriteLine(DateTime.Now.ToString("t") + " Operation Results:");
+        results.Select(i => $"{i.Key}: {i.Value}").ToList().ForEach(Console.WriteLine);
     }
     
 }
