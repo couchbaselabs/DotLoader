@@ -22,7 +22,7 @@ class WorkloadMain
     private ICluster cluster;
     private ILogger _logger;
     private double _hoursToRun = 1;
-    private const int threads = 3;
+    private const int threads = 4;
 
     public async Task Main()
     {
@@ -41,7 +41,7 @@ class WorkloadMain
 
 
         var testSettings = await JsonFileReader.ReadAsync<Settings>("../../../config.json");
-        _hoursToRun = testSettings.runTimeHours;
+        _hoursToRun = testSettings.runTimeMins;
 
         var options = new ClusterOptions
         {
@@ -113,7 +113,7 @@ class WorkloadMain
         //Run operations continuously for time, or just do the operations for numDocs
         public bool runForTime { get; set; }
         //Time in hours to run for if the runForTime is set
-        public double runTimeHours { get; set; }
+        public double runTimeMins { get; set; }
     }
     
 }
