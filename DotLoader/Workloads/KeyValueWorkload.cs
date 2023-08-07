@@ -8,10 +8,8 @@ namespace NET_App.Workloads;
 
 public class KeyValueWorkload
 {
-    private ICluster _cluster;
-    private IBucket _bucket;
-    private IScope _scope;
-    private ICouchbaseCollection _collection;
+    private ICouchbaseCollection[] _collections;
+    private int _collectionsLength;
     private KvOperation _operation;
 
     private const string DocPrefix = "DOTNET-KV-";
@@ -28,13 +26,11 @@ public class KeyValueWorkload
         Delete
     }
 
-    public KeyValueWorkload(ICluster cluster, IBucket bucket, IScope scope, ICouchbaseCollection collection, KvOperation operation)
+    public KeyValueWorkload(ICouchbaseCollection[] collections, KvOperation operation)
     {
-        _cluster = cluster;
-        _bucket = bucket;
-        _scope = scope;
-        _collection = collection;
+        _collections = collections;
         _operation = operation;
+        _collectionsLength = collections.Length;
     }
     
 
@@ -54,13 +50,14 @@ public class KeyValueWorkload
             for (var i = startBatch; i < startBatch + batchSize; i++)
             {
                 var docId = DocPrefix + i;
+                var collectionForOp = _collections[i % _collectionsLength];
                 var task = _operation switch
                 {
-                    KvOperation.Insert => _collection.InsertAsync(docId, document),
-                    KvOperation.Update => _collection.UpsertAsync(docId, document),
-                    KvOperation.Get => _collection.GetAsync(docId),
-                    KvOperation.Delete => _collection.RemoveAsync(docId),
-                    _ => _collection.UpsertAsync(docId, document)
+                    KvOperation.Insert => collectionForOp.InsertAsync(docId, document),
+                    KvOperation.Update => collectionForOp.UpsertAsync(docId, document),
+                    KvOperation.Get => collectionForOp.GetAsync(docId),
+                    KvOperation.Delete => collectionForOp.RemoveAsync(docId),
+                    _ => collectionForOp.UpsertAsync(docId, document)
                 };
                 tasks.Add(task);
             }

@@ -1,11 +1,21 @@
 {
-  "connectionString": "couchbases://cb.fixpraf56h7fq2.nonprod-project-avengers.com",
+  "connectionString": "couchbases://cb.kpxg4blgllou70r4.nonprod-project-avengers.com",
   "username": "test-user",
   "password": "P@ssword1",
-  "bucket": "default",
+  "buckets" : [{
+      "bucketName": "bucket-0", 
+      "scope": "scope0",
+      "collections": ["coll-0", "coll-1"]
+    }, 
+    {
+      "bucketName": "bucket-1",
+      "scope": "scope1", 
+      "collections": ["coll-0", "coll-1"]
+    }
+  ],
   "operation": "Update",
   "numDocs": 100000,
   "docSize": 1000,
   "runForTime": true,
-  "runTimeMins": 5
+  "runTimeMins": 2
 }

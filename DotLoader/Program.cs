@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using App.Metrics.Logging;
 using Couchbase;
+using Couchbase.KeyValue;
 using Couchbase.Query;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,12 +55,21 @@ class WorkloadMain
 
         await cluster.WaitUntilReadyAsync(TimeSpan.FromSeconds(10));
 
-        var bucket = await cluster.BucketAsync(testSettings.bucket);
-        var scope = await bucket.DefaultScopeAsync();
-        var collection = await bucket.DefaultCollectionAsync();
+        List<ICouchbaseCollection> collections = new List<ICouchbaseCollection>();
+
+        foreach (var b in testSettings.buckets)
+        {
+            var bucketObj = await cluster.BucketAsync(b.bucketName);
+            var scopeObj = await bucketObj.ScopeAsync(b.scope);
+            foreach (var c in b.collections)
+            {           
+                var collectionObj = await scopeObj.CollectionAsync(c);
+                collections.Add(collectionObj);
+            }
+        }
 
         Enum.TryParse(testSettings.operation, out KeyValueWorkload.KvOperation operation);
-        var kvWl = new KeyValueWorkload(cluster, bucket, scope, collection, operation);
+        var kvWl = new KeyValueWorkload(collections.ToArray(), operation);
         
         CancellationTokenSource sourceToken = new CancellationTokenSource();
         sourceToken.CancelAfter(TimeSpan.FromMinutes(_hoursToRun));
@@ -79,7 +89,7 @@ class WorkloadMain
         kvWl.PrintResults();
     }
 
-    public static class JsonFileReader
+    private static class JsonFileReader
     {
         public static async Task<T> ReadAsync<T>(string filePath)
         {
@@ -87,12 +97,13 @@ class WorkloadMain
             return await JsonSerializer.DeserializeAsync<T>(stream);
         }
     }
-    public class Settings
+    private class Settings
     {
         public string connectionString  {get; set;}
         public string username {get; set;}
         public string password {get; set;}
-        public string bucket {get; set;}
+        public Bucket[] buckets {get; set;}
+
         //Type of (KV) operation to perform
         public string operation { get; set; }
         //Total number of docs to act upon
@@ -103,6 +114,13 @@ class WorkloadMain
         public bool runForTime { get; set; }
         //Time in hours to run for if the runForTime is set
         public double runTimeMins { get; set; }
+    }
+
+    private class Bucket
+    {
+        public string bucketName {get; set;}
+        public string scope {get; set;}
+        public string[] collections {get; set;}
     }
     
 }
