@@ -68,8 +68,12 @@ class WorkloadMain
             }
         }
 
+        var runKv = testSettings.workloads.ToLower().Contains("kv");
+        var runQuery = testSettings.workloads.ToLower().Contains("query");
+        
         Enum.TryParse(testSettings.operation, out KeyValueWorkload.KvOperation operation);
         var kvWl = new KeyValueWorkload(collections.ToArray(), operation);
+        var queryWl = new QueryWorkload(cluster, collections.ToArray());
         
         CancellationTokenSource sourceToken = new CancellationTokenSource();
         sourceToken.CancelAfter(TimeSpan.FromMinutes(_hoursToRun));
@@ -79,14 +83,38 @@ class WorkloadMain
 
         var tasks = new List<Task>();
 
-        for (var i = 0; i < threads; i++)
+        if (runKv)
         {
-            tasks.Add(kvWl.StartAsync(docsPerThread, testSettings.docSize, i*docsPerThread, testSettings.runForTime, cancellationToken));
+            Console.WriteLine("Running KV workloads");
+            for (var i = 0; i < threads; i++)
+            {
+                tasks.Add(kvWl.StartAsync(docsPerThread, testSettings.docSize, i*docsPerThread, testSettings.runForTime, cancellationToken));
+            }
+            tasks.Add(kvWl.PrintResultsPeriodically(cancellationToken));
         }
-        tasks.Add(kvWl.PrintResultsPeriodically(cancellationToken));
+
+        if (runQuery)
+        {
+            Console.WriteLine("Running Query workloads");
+            if (testSettings.createIndexes)
+            {
+                await queryWl.BuildIndexes();
+            }
+            tasks.Add(queryWl.StartAsync(cancellationToken));
+            tasks.Add(queryWl.PrintResultsPeriodically(cancellationToken));
+        }
+
         await Task.WhenAll(tasks);
 
-        kvWl.PrintResults();
+        if (runKv)
+        {
+            kvWl.PrintResults();
+        }
+
+        if (runQuery)
+        {
+            queryWl.PrintResults();
+        }
     }
 
     private static class JsonFileReader
@@ -103,6 +131,10 @@ class WorkloadMain
         public string username {get; set;}
         public string password {get; set;}
         public Bucket[] buckets {get; set;}
+        public string workloads { get; set; }
+        public bool createIndexes { get; set; }
+
+
 
         //Type of (KV) operation to perform
         public string operation { get; set; }

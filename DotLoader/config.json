@@ -1,5 +1,5 @@
 {
-  "connectionString": "couchbases://cb.kpxg4blgllou70r4.nonprod-project-avengers.com",
+  "connectionString": "couchbases://some-conn-str",
   "username": "test-user",
   "password": "P@ssword1",
   "buckets" : [{
@@ -13,6 +13,8 @@
       "collections": ["coll-0", "coll-1"]
     }
   ],
+  "workloads": "kv,query",
+  "createIndexes": false,
   "operation": "Update",
   "numDocs": 100000,
   "docSize": 1000,
