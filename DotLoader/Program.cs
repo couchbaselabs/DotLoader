@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NET_App.Workloads;
+using NetEscapades.Extensions.Logging.RollingFile;
 using Newtonsoft.Json.Linq;
 using ILoggerFactory = Microsoft.Extensions.Logging.ILoggerFactory;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
@@ -30,10 +31,17 @@ class WorkloadMain
         IServiceCollection serviceCollection = new ServiceCollection();
         serviceCollection.AddLogging(builder => builder
             .AddFilter(level => level >= LogLevel.Debug)
-        );
+            .AddFile(options =>
+            {
+                options.FileName = "DotLoader-";
+                options.LogDirectory = "Logs";
+                options.FileSizeLimit = 20 * 1024 * 1024;
+                options.FilesPerPeriodicityLimit = 200;
+                options.Extension = "txt";
+                options.Periodicity = PeriodicityOptions.Minutely;
+            })
+        ); 
         var loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
-        loggerFactory.AddFile("Logs/DotLoader-{Date}.txt", LogLevel.Debug);
-
 
         var testSettings = await JsonFileReader.ReadAsync<Settings>("../../../config.json");
         _hoursToRun = testSettings.runTimeMins;
