@@ -6,14 +6,12 @@ using System.Threading.Tasks;
 using App.Metrics.Logging;
 using Couchbase;
 using Couchbase.KeyValue;
-using Couchbase.Query;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NET_App.Workloads;
-using NetEscapades.Extensions.Logging.RollingFile;
-using Newtonsoft.Json.Linq;
-using ILoggerFactory = Microsoft.Extensions.Logging.ILoggerFactory;
+
+using Serilog;
+using ILogger = Serilog.ILogger;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 
@@ -28,20 +26,17 @@ class WorkloadMain
 
     public async Task Main()
     {
+        var log = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.File("Logs/log.txt", fileSizeLimitBytes: 25 * 1024 * 1024, rollOnFileSizeLimit: true, rollingInterval: RollingInterval.Minute)
+            .CreateLogger();
+        
         IServiceCollection serviceCollection = new ServiceCollection();
         serviceCollection.AddLogging(builder => builder
-            .AddFilter(level => level >= LogLevel.Debug)
-            .AddFile(options =>
-            {
-                options.FileName = "DotLoader-";
-                options.LogDirectory = "Logs";
-                options.FileSizeLimit = 20 * 1024 * 1024;
-                options.FilesPerPeriodicityLimit = 200;
-                options.Extension = "txt";
-                options.Periodicity = PeriodicityOptions.Minutely;
-            })
+                .AddFilter(level => level >= LogLevel.Debug)
         ); 
         var loggerFactory = serviceCollection.BuildServiceProvider().GetService<ILoggerFactory>();
+        loggerFactory.AddSerilog(log);
 
         var testSettings = await JsonFileReader.ReadAsync<Settings>("../../../config.json");
         _hoursToRun = testSettings.runTimeMins;
